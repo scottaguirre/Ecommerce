@@ -13,4 +13,4 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
-module.exports.errorMiddleware = { notFound, errorHandler };
+export { notFound, errorHandler };

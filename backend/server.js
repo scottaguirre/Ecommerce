@@ -1,40 +1,57 @@
-const express = require("express");
+import cors from "cors";
+import path from "path";
+import express from "express";
+import dotenv from "dotenv";
+import colors from "colors";
+import morgan from "morgan";
+import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
+import connectDB from "./config/db.js";
+import productRoutes from "./routes/productRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
+
 const app = express();
-const path = require("path" );
-const cors = require("cors");
-const dotenv = require("dotenv");
-const { connectDB } = require("./config/db");
-const colors = require("colors");
-const { products } = require("./data/products");
-const productRoutes = require("./routes/productRoutes").router;
-const {
-  notFound,
-  errorHandler,
-} = require("./middleware/errorMiddleware").errorMiddleware;
-
 dotenv.config();
-
 // Database Connection
 connectDB();
+
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+}
 
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.get("/api/products/", (req, res) => {
-  res.status(200).json(products);
-});
+app.use("/api/products", productRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/upload", uploadRoutes);
 
-app.get("/api/products/:id", (req, res) => {
-  const product = products.find((p) => p._id === req.params.id);
-  res.status(200).json(product);
-});
+app.get("/api/config/paypal", (req, res) =>
+  res.send(process.env.PAYPAL_CLIENT_ID)
+);
+
+const __dirname = path.resolve();
+app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "/frontend/build")));
+
+  app.get("*", (req, res) =>
+    res.sendFile(path.resolve(__dirname, "frontend", "build", "index.html"))
+  );
+} else {
+  app.get("/", (req, res) => {
+    res.send("API is running....");
+  });
+}
 
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 4000;
 
-app.listen(5000, () => {
+app.listen(PORT, () => {
   console.log(`Working in ${process.env.NODE_ENV} on port: ${PORT}`.blue.bold);
 });
